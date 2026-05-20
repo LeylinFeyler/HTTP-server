@@ -1,6 +1,7 @@
 # executables
-http-server
+server
 *.out
+server.log
 
 # build artifacts
 *.o
