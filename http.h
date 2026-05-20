@@ -9,6 +9,6 @@ typedef struct {
     char version[32];
 } HttpRequest;
 
-int parse_request(char* raw,HttpRequest* req);
+int parse_request(char *raw, HttpRequest *req);
 
 #endif
