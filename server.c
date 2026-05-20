@@ -18,7 +18,8 @@
 void reap_zombies(int sig) {
     (void)sig;
 
-    while (waitpid(-1, NULL, WNOHANG) > 0);
+    while (waitpid(-1, NULL, WNOHANG) > 0)
+        ;
 }
 
 void send_response(int fd, int status, const char *text) {
@@ -30,9 +31,7 @@ void send_response(int fd, int status, const char *text) {
             "Content-Length:%ld\r\n"
             "\r\n"
             "%s",
-            status,
-            strlen(text),
-            text);
+            status, strlen(text), text);
 
     send(fd, response, strlen(response), 0);
 }
@@ -40,13 +39,11 @@ void send_response(int fd, int status, const char *text) {
 void handle_client(int client_fd, struct sockaddr_in *client) {
     char buffer[BUFFER_SIZE];
 
-    int n = recv(client_fd,
-                buffer,
-                sizeof(buffer) - 1,
-                0);
+    int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 
-    if (n <= 0)
+    if (n <= 0) {
         return;
+    }
 
     buffer[n] = '\0';
 
@@ -59,17 +56,11 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
 
     char ip[INET_ADDRSTRLEN];
 
-    inet_ntop(AF_INET,
-            &client->sin_addr,
-            ip,
-            sizeof(ip));
+    inet_ntop(AF_INET, &client->sin_addr, ip, sizeof(ip));
 
     log_message(ip, req.method, req.path);
 
-    printf("%s %s %s\n",
-            ip,
-            req.method,
-            req.path);
+    printf("%s %s %s\n", ip, req.method, req.path);
 
     if (strcmp(req.path, "/") == 0) {
         send_file(client_fd, "static/index.html");
@@ -87,21 +78,15 @@ int main() {
 
     int opt = 1;
 
-    setsockopt(server_fd,
-            SOL_SOCKET,
-            SO_REUSEADDR,
-            &opt,
-            sizeof(opt));
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     struct sockaddr_in server;
 
-    server.sin_family = AF_INET;
-    server.sin_port = htons(PORT);
+    server.sin_family      = AF_INET;
+    server.sin_port        = htons(PORT);
     server.sin_addr.s_addr = INADDR_ANY;
 
-    bind(server_fd,
-        (struct sockaddr *)&server,
-        sizeof(server));
+    bind(server_fd, (struct sockaddr *)&server, sizeof(server));
 
     listen(server_fd, SOMAXCONN);
 
@@ -111,12 +96,11 @@ int main() {
         struct sockaddr_in client;
         socklen_t len = sizeof(client);
 
-        int fd = accept(server_fd,
-                        (struct sockaddr *)&client,
-                        &len);
+        int fd = accept(server_fd, (struct sockaddr *)&client, &len);
 
-        if (fd < 0)
+        if (fd < 0) {
             continue;
+        }
 
         pid_t pid = fork();
 

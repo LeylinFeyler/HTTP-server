@@ -2,6 +2,7 @@
 server
 *.out
 server.log
+TODO
 
 # build artifacts
 *.o
