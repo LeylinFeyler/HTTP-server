@@ -22,16 +22,17 @@ void reap_zombies(int sig) {
         ;
 }
 
-void send_response(int fd, int status, const char *text) {
+void send_response(int fd, int status, const char *status_text, const char *text) {
+
     char response[4096];
 
-    sprintf(response,
-            "HTTP/1.1 %d OK\r\n"
-            "Content-Type:text/plain\r\n"
-            "Content-Length:%ld\r\n"
-            "\r\n"
-            "%s",
-            status, strlen(text), text);
+    snprintf(response, sizeof(response),
+             "HTTP/1.1 %d %s\r\n"
+             "Content-Type:text/plain\r\n"
+             "Content-Length:%ld\r\n"
+             "\r\n"
+             "%s",
+             status, status_text, strlen(text), text);
 
     send(fd, response, strlen(response), 0);
 }
@@ -50,7 +51,7 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
     HttpRequest req;
 
     if (parse_request(buffer, &req) != 3) {
-        send_response(client_fd, 400, "Bad Request");
+        send_response(client_fd, 400, "Bad Request", "400 Bad Request");
         return;
     }
 
@@ -62,12 +63,10 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
 
     printf("%s %s %s\n", ip, req.method, req.path);
 
-    if (strcmp(req.path, "/") == 0) {
-        send_file(client_fd, "static/index.html");
-    } else if (strcmp(req.path, "/hello") == 0) {
-        send_response(client_fd, 200, "hello user");
+    if (strcmp(req.path, "/hello") == 0) {
+        send_response(client_fd, 200, "OK", "hello user");
     } else {
-        send_file(client_fd, "static/404.html");
+        send_file(client_fd, req.path);
     }
 }
 
