@@ -64,8 +64,8 @@ void send_status_response(int fd, int status, const char *status_text, const cha
 
 void send_file(int client_fd, const char *path) {
 
-    /* stop path traversal */
-    if (strstr(path, "..")) {
+    /* reject suspicious paths */
+    if (!is_safe_path(path)) {
         send_status_response(client_fd, 403, "Forbidden", "403 Forbidden");
 
         return;
@@ -123,4 +123,24 @@ void send_file(int client_fd, const char *path) {
     }
 
     fclose(file);
+}
+
+int is_safe_path(const char *path) {
+
+    /* must start with '/' */
+    if (path[0] != '/') {
+        return 0;
+    }
+
+    /* reject directory traversal */
+    if (strstr(path, "..")) {
+        return 0;
+    }
+
+    /* reject backslashes */
+    if (strchr(path, '\\')) {
+        return 0;
+    }
+
+    return 1;
 }

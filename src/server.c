@@ -48,6 +48,8 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
 
     buffer[n] = '\0';
 
+    printf("\nRAW REQUEST:\n%s", buffer);
+
     HttpRequest req;
 
     if (parse_request(buffer, &req) != 3) {
