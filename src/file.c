@@ -62,7 +62,7 @@ void send_status_response(int fd, int status, const char *status_text, const cha
     send(fd, response, strlen(response), 0);
 }
 
-void send_file(int client_fd, const char *path) {
+void send_file(int client_fd, const char *path, int send_body) {
 
     /* reject suspicious paths */
     if (!is_safe_path(path)) {
@@ -114,12 +114,16 @@ void send_file(int client_fd, const char *path) {
 
     send(client_fd, header, strlen(header), 0);
 
-    char buffer[CHUNK_SIZE];
-    size_t bytes;
+    /* HEAD sends headers only */
+    if (send_body) {
 
-    while ((bytes = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+        char buffer[CHUNK_SIZE];
+        size_t bytes;
 
-        send(client_fd, buffer, bytes, 0);
+        while ((bytes = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+
+            send(client_fd, buffer, bytes, 0);
+        }
     }
 
     fclose(file);

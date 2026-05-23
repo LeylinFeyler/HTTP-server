@@ -39,36 +39,39 @@ void send_response(int fd, int status, const char *status_text, const char *text
 
 void handle_client(int client_fd, struct sockaddr_in *client) {
     char buffer[BUFFER_SIZE];
-
     int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-
     if (n <= 0) {
         return;
     }
 
     buffer[n] = '\0';
-
     printf("\nRAW REQUEST:\n%s", buffer);
 
     HttpRequest req;
-
     if (parse_request(buffer, &req) != 3) {
         send_response(client_fd, 400, "Bad Request", "400 Bad Request");
         return;
     }
 
-    char ip[INET_ADDRSTRLEN];
+    int send_body = 1;
 
+    if (strcmp(req.method, "HEAD") == 0) {
+        send_body = 0;
+    } else if (strcmp(req.method, "GET") != 0) {
+        send_response(client_fd, 405, "Method Not Allowed", "405 Method Not Allowed");
+        return;
+    }
+
+    char ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client->sin_addr, ip, sizeof(ip));
 
     log_message(ip, req.method, req.path);
-
     printf("%s %s %s\n", ip, req.method, req.path);
 
     if (strcmp(req.path, "/hello") == 0) {
         send_response(client_fd, 200, "OK", "hello user");
     } else {
-        send_file(client_fd, req.path);
+        send_file(client_fd, req.path, send_body);
     }
 }
 
