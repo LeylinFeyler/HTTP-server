@@ -1,3 +1,9 @@
+#include "file.h"
+#include "http.h"
+#include "logger.h"
+#include "response.h"
+#include "routes.h"
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <signal.h>
@@ -8,10 +14,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "file.h"
-#include "http.h"
-#include "logger.h"
-
 #define PORT 8888
 #define BUFFER_SIZE 8192
 
@@ -20,21 +22,6 @@ void reap_zombies(int sig) {
 
     while (waitpid(-1, NULL, WNOHANG) > 0)
         ;
-}
-
-void send_response(int fd, int status, const char *status_text, const char *text) {
-
-    char response[4096];
-
-    snprintf(response, sizeof(response),
-             "HTTP/1.1 %d %s\r\n"
-             "Content-Type:text/plain\r\n"
-             "Content-Length:%ld\r\n"
-             "\r\n"
-             "%s",
-             status, status_text, strlen(text), text);
-
-    send(fd, response, strlen(response), 0);
 }
 
 void handle_client(int client_fd, struct sockaddr_in *client) {
@@ -67,9 +54,7 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
     log_message(ip, req.method, req.path);
     printf("%s %s %s\n", ip, req.method, req.path);
 
-    if (strcmp(req.path, "/hello") == 0) {
-        send_response(client_fd, 200, "OK", "hello user");
-    } else {
+    if (!handle_route(client_fd, &req)) {
         send_file(client_fd, req.path, send_body);
     }
 }
