@@ -35,7 +35,7 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
 
     HttpRequest req;
     if (!parse_request(buffer, &req)) {
-        send_response(client_fd, 400, "Bad Request", "400 Bad Request");
+        send_error_page(client_fd, 400, "Bad Request");
         return;
     }
 

@@ -62,11 +62,45 @@ void send_status_response(int fd, int status, const char *status_text, const cha
     send(fd, response, strlen(response), 0);
 }
 
+void send_error_page(int client_fd, int status, const char *status_text) {
+    char path[64];
+    snprintf(path, sizeof(path), "static/%d.html", status);
+
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        send_status_response(client_fd, status, status_text, status_text);
+        return;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    rewind(file);
+
+    char header[1024];
+    snprintf(header, sizeof(header),
+             "HTTP/1.1 %d %s\r\n"
+             "Content-Type:text/html\r\n"
+             "Content-Length:%ld\r\n"
+             "\r\n",
+             status, status_text, size);
+
+    send(client_fd, header, strlen(header), 0);
+
+    char buffer[CHUNK_SIZE];
+    size_t bytes;
+
+    while ((bytes = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+        send(client_fd, buffer, bytes, 0);
+    }
+
+    fclose(file);
+}
+
 void send_file(int client_fd, const char *path, int send_body) {
 
     /* reject suspicious paths */
     if (!is_safe_path(path)) {
-        send_status_response(client_fd, 403, "Forbidden", "403 Forbidden");
+        send_error_page(client_fd, 403, "Forbidden");
 
         return;
     }
@@ -83,20 +117,8 @@ void send_file(int client_fd, const char *path, int send_body) {
     FILE *file = fopen(full_path, "rb");
 
     if (!file) {
-
-        FILE *not_found = fopen("static/404.html", "rb");
-
-        if (!not_found) {
-            send_status_response(client_fd, 404, "Not Found", "404 File not found");
-
-            return;
-        }
-
-        fclose(not_found);
-
-        strcpy(full_path, "static/404.html");
-
-        file = fopen(full_path, "rb");
+        send_error_page(client_fd, 404, "Not Found");
+        return;
     }
 
     fseek(file, 0, SEEK_END);
