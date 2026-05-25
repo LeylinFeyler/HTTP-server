@@ -3,7 +3,7 @@ CFLAGS=-Wall -Wextra -Werror -Wpedantic -g
 
 SRC=$(shell find src -name "*.c")
 
-lecurl:
+http:
 	clear && $(CC) $(CFLAGS) $(SRC) -o server -lm
 
 clean:

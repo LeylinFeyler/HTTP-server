@@ -6,26 +6,19 @@
 #include "routes.h"
 
 #include <arpa/inet.h>
-#include <errno.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
-#define BUFFER_SIZE 8192
-
-void reap_zombies(int sig) {
-    (void)sig;
-
-    while (waitpid(-1, NULL, WNOHANG) > 0)
-        ;
-}
+#define MAX_EVENTS 64
 
 void handle_client(int client_fd, struct sockaddr_in *client) {
-    char buffer[BUFFER_SIZE], raw_buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE];
+    char raw_buffer[BUFFER_SIZE];
+
     int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (n <= 0) {
         return;
@@ -35,13 +28,13 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
     strcpy(raw_buffer, buffer);
 
     HttpRequest req;
+
     if (!parse_request(buffer, &req)) {
         send_error_page(client_fd, 400, "Bad Request");
         return;
     }
 
     int send_body = 1;
-
     if (strcmp(req.method, "HEAD") == 0) {
         send_body = 0;
     } else if (strcmp(req.method, "GET") != 0) {
@@ -51,7 +44,6 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
 
     char ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client->sin_addr, ip, sizeof(ip));
-
     log_message(ip, req.method, req.path);
     log_raw_message(ip, req.method, req.path, raw_buffer);
     printf("%s %s %s\n", ip, req.method, req.path);
@@ -61,30 +53,71 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
     }
 }
 
-int main(void) {
-    signal(SIGCHLD, reap_zombies);
-
+void run_server_epoll(void) {
     int server_fd = create_server_socket();
 
-    while (1) {
-        struct sockaddr_in client;
+    int epfd = epoll_create1(0);
+    if (epfd < 0) {
+        perror("epoll_create1");
+        exit(1);
+    }
 
-        int fd = accept_client(server_fd, &client);
-        if (fd < 0) {
+    struct epoll_event ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.events  = EPOLLIN;
+    ev.data.fd = server_fd;
+
+    if (epoll_ctl(epfd, EPOLL_CTL_ADD, server_fd, &ev) < 0) {
+        perror("epoll_ctl");
+        exit(1);
+    }
+
+    struct epoll_event events[MAX_EVENTS];
+    memset(&events, 0, sizeof(events));
+
+    while (1) {
+        int nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
+        if (nfds < 0) {
+            perror("epoll_wait");
             continue;
         }
 
-        pid_t pid = fork();
+        for (int i = 0; i < nfds; i++) {
+            int current_fd = events[i].data.fd;
 
-        if (pid == 0) {
-            close(server_fd);
+            if (current_fd == server_fd) {
+                struct sockaddr_in client;
+                int client_fd = accept_client(server_fd, &client);
+                if (client_fd < 0) {
+                    continue;
+                }
 
-            handle_client(fd, &client);
+                ev.events  = EPOLLIN;
+                ev.data.fd = client_fd;
 
-            close(fd);
-            exit(0);
+                if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev) < 0) {
+                    perror("epoll_ctl client");
+                    close(client_fd);
+                    continue;
+                }
+
+                continue;
+            }
+
+            struct sockaddr_in client;
+            socklen_t len = sizeof(client);
+
+            getpeername(current_fd, (struct sockaddr *)&client, &len);
+            handle_client(current_fd, &client);
+            epoll_ctl(epfd, EPOLL_CTL_DEL, current_fd, NULL);
+
+            close(current_fd);
         }
-
-        close(fd);
     }
+}
+
+int main(void) {
+    run_server_epoll();
+
+    return 0;
 }
