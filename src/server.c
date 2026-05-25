@@ -16,40 +16,54 @@
 #define MAX_EVENTS 64
 
 void handle_client(int client_fd, struct sockaddr_in *client) {
-    char buffer[BUFFER_SIZE];
-    char raw_buffer[BUFFER_SIZE];
-
-    int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-    if (n <= 0) {
-        return;
-    }
-
-    buffer[n] = '\0';
-    strcpy(raw_buffer, buffer);
-
-    HttpRequest req;
-
-    if (!parse_request(buffer, &req)) {
-        send_error_page(client_fd, 400, "Bad Request");
-        return;
-    }
-
-    int send_body = 1;
-    if (strcmp(req.method, "HEAD") == 0) {
-        send_body = 0;
-    } else if (strcmp(req.method, "GET") != 0) {
-        send_response(client_fd, 405, "Method Not Allowed", "405 Method Not Allowed");
-        return;
-    }
-
     char ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &client->sin_addr, ip, sizeof(ip));
-    log_message(ip, req.method, req.path);
-    log_raw_message(ip, req.method, req.path, raw_buffer);
-    printf("%s %s %s\n", ip, req.method, req.path);
 
-    if (!handle_route(client_fd, &req)) {
-        send_file(client_fd, req.path, send_body);
+    inet_ntop(AF_INET, &client->sin_addr, ip, sizeof(ip));
+
+    while (1) {
+        char buffer[BUFFER_SIZE];
+        char raw_buffer[BUFFER_SIZE];
+
+        int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+        /* client disconnected */
+        if (n <= 0) {
+            break;
+        }
+
+        buffer[n] = '\0';
+        strcpy(raw_buffer, buffer);
+
+        HttpRequest req;
+        if (!parse_request(buffer, &req)) {
+            send_error_page(client_fd, 400, "Bad Request", 0);
+            break;
+        }
+
+        int keep_alive = should_keep_alive(&req);
+        int send_body  = 1;
+        if (strcmp(req.method, "HEAD") == 0) {
+            send_body = 0;
+        } else if (strcmp(req.method, "GET") != 0) {
+            send_response(client_fd, 405, "Method Not Allowed", "405 Method Not Allowed",
+                          keep_alive);
+            if (!keep_alive) {
+                break;
+            }
+            continue;
+        }
+
+        log_message(ip, req.method, req.path);
+        log_raw_message(ip, req.method, req.path, raw_buffer);
+        printf("%s %s %s\n", ip, req.method, req.path);
+
+        if (!handle_route(client_fd, &req)) {
+            send_file(client_fd, req.path, send_body, keep_alive);
+        }
+
+        /* close requested */
+        if (!keep_alive) {
+            break;
+        }
     }
 }
 

@@ -7,6 +7,25 @@ void trim_newline(char *s) {
     s[strcspn(s, "\r\n")] = '\0';
 }
 
+int should_keep_alive(HttpRequest *req) {
+    /* HTTP/1.1 => keep-alive by default */
+    if (strcmp(req->version, "HTTP/1.1") == 0) {
+        if (strcasecmp(req->connection, "close") == 0) {
+            return 0;
+        }
+        return 1;
+    }
+
+    /* HTTP/1.0 => only if requested */
+    if (strcmp(req->version, "HTTP/1.0") == 0) {
+        if (strcasecmp(req->connection, "keep-alive") == 0) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int parse_request(char *raw, HttpRequest *req) {
     memset(req, 0, sizeof(HttpRequest));
 

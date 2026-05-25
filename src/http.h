@@ -15,5 +15,6 @@ typedef struct {
 } HttpRequest;
 
 int parse_request(char *raw, HttpRequest *req);
+int should_keep_alive(HttpRequest *req);
 
 #endif

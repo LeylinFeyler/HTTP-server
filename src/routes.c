@@ -1,19 +1,18 @@
 #include "routes.h"
 #include "file.h"
+#include "http.h"
 #include "response.h"
 #include <string.h>
 
-void send_response(int fd, int status, const char *status_text, const char *text);
+void send_response(int fd, int status, const char *status_text, const char *text, int keep_alive);
 
 // route handlers
 void handle_hello(int fd, HttpRequest *req) {
-    (void)req;
-    send_response(fd, 200, "OK", "hello user");
+    send_response(fd, 200, "OK", "hello user", should_keep_alive(req));
 }
 
 void handle_health(int fd, HttpRequest *req) {
-    (void)req;
-    send_response(fd, 200, "OK", "server healthy");
+    send_response(fd, 200, "OK", "server healthy", should_keep_alive(req));
 }
 
 // route table
