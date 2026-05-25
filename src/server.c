@@ -1,6 +1,7 @@
 #include "file.h"
 #include "http.h"
 #include "logger.h"
+#include "net.h"
 #include "response.h"
 #include "routes.h"
 
@@ -14,7 +15,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define PORT 8888
 #define BUFFER_SIZE 8192
 
 void reap_zombies(int sig) {
@@ -25,13 +25,14 @@ void reap_zombies(int sig) {
 }
 
 void handle_client(int client_fd, struct sockaddr_in *client) {
-    char buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE], raw_buffer[BUFFER_SIZE];
     int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (n <= 0) {
         return;
     }
 
     buffer[n] = '\0';
+    strcpy(raw_buffer, buffer);
 
     HttpRequest req;
     if (!parse_request(buffer, &req)) {
@@ -52,6 +53,7 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
     inet_ntop(AF_INET, &client->sin_addr, ip, sizeof(ip));
 
     log_message(ip, req.method, req.path);
+    log_raw_message(ip, req.method, req.path, raw_buffer);
     printf("%s %s %s\n", ip, req.method, req.path);
 
     if (!handle_route(client_fd, &req)) {
@@ -59,33 +61,15 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
     }
 }
 
-int main() {
+int main(void) {
     signal(SIGCHLD, reap_zombies);
 
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-    int opt = 1;
-
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    struct sockaddr_in server;
-
-    server.sin_family      = AF_INET;
-    server.sin_port        = htons(PORT);
-    server.sin_addr.s_addr = INADDR_ANY;
-
-    bind(server_fd, (struct sockaddr *)&server, sizeof(server));
-
-    listen(server_fd, SOMAXCONN);
-
-    printf("http server on :%d\n", PORT);
+    int server_fd = create_server_socket();
 
     while (1) {
         struct sockaddr_in client;
-        socklen_t len = sizeof(client);
 
-        int fd = accept(server_fd, (struct sockaddr *)&client, &len);
-
+        int fd = accept_client(server_fd, &client);
         if (fd < 0) {
             continue;
         }
