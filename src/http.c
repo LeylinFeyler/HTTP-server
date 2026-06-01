@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 void trim_newline(char *s) {
     s[strcspn(s, "\r\n")] = '\0';
@@ -187,4 +188,20 @@ int is_valid_method(const char *method) {
 
 int is_valid_http_version(const char *version) {
     return strcmp(version, "HTTP/1.0") == 0 || strcmp(version, "HTTP/1.1") == 0;
+}
+
+void send_json_response(int fd, int status, const char *status_text, const char *json,
+                        int keep_alive) {
+    char response[4096];
+
+    snprintf(response, sizeof(response),
+             "HTTP/1.1 %d %s\r\n"
+             "Content-Type: application/json\r\n"
+             "Content-Length: %ld\r\n"
+             "Connection: %s\r\n"
+             "\r\n"
+             "%s",
+             status, status_text, strlen(json), keep_alive ? "keep-alive" : "close", json);
+
+    send(fd, response, strlen(response), 0);
 }

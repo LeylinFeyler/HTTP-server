@@ -2,6 +2,8 @@
 #define HTTP_H
 
 #define MAX_REQUEST_SIZE 8192
+#define JSON_OK "{\"status\":\"ok\"}"
+#define JSON_ERROR "{\"status\":\"error\"}"
 
 typedef struct {
     char method[16];
@@ -33,5 +35,8 @@ void url_decode(char *dst, const char *src);
 
 int is_valid_method(const char *method);
 int is_valid_http_version(const char *version);
+
+void send_json_response(int fd, int status, const char *status_text, const char *json,
+                        int keep_alive);
 
 #endif

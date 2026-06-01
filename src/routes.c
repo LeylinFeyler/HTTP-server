@@ -35,11 +35,16 @@ void handle_greet(int fd, HttpRequest *req) {
     send_response(fd, 200, "OK", response, should_keep_alive(req));
 }
 
+void handle_json(int fd, HttpRequest *req) {
+    send_json_response(fd, 200, "OK", JSON_OK, should_keep_alive(req));
+}
+
 // route table
 Route routes[] = {{"/hello", handle_hello},
                   {"/health", handle_health},
                   {"/echo", handle_echo},
-                  {"/greet", handle_greet}};
+                  {"/greet", handle_greet},
+                  {"/json", handle_json}};
 
 int handle_route(int fd, HttpRequest *req) {
     for (size_t i = 0; i < sizeof(routes) / sizeof(routes[0]); i++) {
