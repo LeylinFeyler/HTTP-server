@@ -6,10 +6,14 @@ A minimal HTTP server written in C.
 
 - `GET` and `HEAD` support
 - static file serving
-- MIME types
+- MIME type detection
 - route system
 - keep-alive support
+- non-blocking sockets
 - epoll backend
+- idle connection timeout
+- request size limits
+- path traversal protection
 - custom error pages
 - request logging
 
