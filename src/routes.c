@@ -30,9 +30,6 @@ void handle_greet(int fd, HttpRequest *req) {
         name = "user";
     }
 
-    printf("query: %s\n", req->query);
-    printf("name: %s\n", name ? name : "NULL");
-
     char response[256];
     snprintf(response, sizeof(response), "hello %s", name);
     send_response(fd, 200, "OK", response, should_keep_alive(req));

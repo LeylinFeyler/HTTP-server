@@ -15,6 +15,13 @@ typedef struct {
     char connection[64];
     char accept[256];
 
+    char content_type[128];
+    char accept_encoding[128];
+    char referer[512];
+    char origin[256];
+    char authorization[512];
+    char cookie[1024];
+
     int content_length;
     char *body;
 } HttpRequest;

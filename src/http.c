@@ -84,6 +84,18 @@ int parse_request(char *raw, HttpRequest *req) {
             snprintf(req->accept, sizeof(req->accept), "%s", line + 8);
         } else if (strncmp(line, "Content-Length:", 15) == 0) {
             req->content_length = atoi(line + 16);
+        } else if (strncmp(line, "Content-Type:", 13) == 0) {
+            snprintf(req->content_type, sizeof(req->content_type), "%s", line + 14);
+        } else if (strncmp(line, "Accept-Encoding:", 18) == 0) {
+            snprintf(req->accept_encoding, sizeof(req->accept_encoding), "%s", line + 19);
+        } else if (strncmp(line, "Referer:", 9) == 0) {
+            snprintf(req->referer, sizeof(req->referer), "%s", line + 10);
+        } else if (strncmp(line, "Origin:", 7) == 0) {
+            snprintf(req->origin, sizeof(req->origin), "%s", line + 8);
+        } else if (strncmp(line, "Authorization:", 14) == 0) {
+            snprintf(req->authorization, sizeof(req->authorization), "%s", line + 15);
+        } else if (strncmp(line, "Cookie:", 7) == 0) {
+            snprintf(req->cookie, sizeof(req->cookie), "%s", line + 8);
         }
     }
 
@@ -91,6 +103,12 @@ int parse_request(char *raw, HttpRequest *req) {
     trim_newline(req->user_agent);
     trim_newline(req->connection);
     trim_newline(req->accept);
+    trim_newline(req->content_type);
+    trim_newline(req->accept_encoding);
+    trim_newline(req->referer);
+    trim_newline(req->origin);
+    trim_newline(req->authorization);
+    trim_newline(req->cookie);
 
     /* HTTP/1.1 requires Host */
     if (strcmp(req->version, "HTTP/1.1") == 0 && req->host[0] == '\0') {
