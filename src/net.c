@@ -1,6 +1,7 @@
 #include "net.h"
 
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,9 +12,13 @@
 
 int create_server_socket(void) {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-
     if (server_fd < 0) {
         perror("socket");
+        exit(1);
+    }
+
+    if (set_nonblocking(server_fd) < 0) {
+        close(server_fd);
         exit(1);
     }
 
@@ -54,6 +59,25 @@ int accept_client(int server_fd, struct sockaddr_in *client) {
     if (fd < 0) {
         perror("accept");
     }
+    if (fd >= 0) {
+        if (set_nonblocking(fd) < 0) {
+            close(fd);
+            return -1;
+        }
+    }
 
     return fd;
+}
+
+int set_nonblocking(int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0) {
+        perror("fcntl F_GETFL");
+        return -1;
+    }
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        perror("fcntl F_SETFL");
+        return -1;
+    }
+    return 0;
 }

@@ -6,6 +6,7 @@
 #include "routes.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,8 +37,11 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
         return;
     }
 
-    /* socket error */
+    /* no data available */
     if (n < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return;
+        }
         perror("recv");
         client_last_activity[client_fd] = 0;
         close(client_fd);
