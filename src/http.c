@@ -49,6 +49,14 @@ int parse_request(char *raw, HttpRequest *req) {
         return 0;
     }
 
+    /* split path + query */
+    char *query_start = strchr(req->path, '?');
+    if (query_start) {
+        *query_start = '\0';
+        query_start++;
+        snprintf(req->query, sizeof(req->query), "%s", query_start);
+    }
+
     while ((line = strtok_r(NULL, "\r\n", &saveptr))) {
         if (strncmp(line, "Host:", 5) == 0) {
             snprintf(req->host, sizeof(req->host), "%s", line + 6);
@@ -69,4 +77,31 @@ int parse_request(char *raw, HttpRequest *req) {
     trim_newline(req->accept);
 
     return 1;
+}
+
+char *get_query_param(HttpRequest *req, const char *key) {
+    static char value[256];
+    value[0] = '\0';
+
+    char query_copy[512];
+    snprintf(query_copy, sizeof(query_copy), "%s", req->query);
+
+    char *saveptr;
+    char *pair = strtok_r(query_copy, "&", &saveptr);
+    while (pair) {
+        char *eq = strchr(pair, '=');
+        if (eq) {
+            *eq               = '\0';
+            char *param_key   = pair;
+            char *param_value = eq + 1;
+
+            if (strcmp(param_key, key) == 0) {
+                snprintf(value, sizeof(value), "%s", param_value);
+                return value;
+            }
+        }
+        pair = strtok_r(NULL, "&", &saveptr);
+    }
+
+    return NULL;
 }
