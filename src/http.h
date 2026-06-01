@@ -12,6 +12,9 @@ typedef struct {
     char user_agent[512];
     char connection[64];
     char accept[256];
+
+    int content_length;
+    char *body;
 } HttpRequest;
 
 int parse_request(char *raw, HttpRequest *req);

@@ -1,6 +1,7 @@
 #include "http.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 void trim_newline(char *s) {
@@ -29,6 +30,15 @@ int should_keep_alive(HttpRequest *req) {
 int parse_request(char *raw, HttpRequest *req) {
     memset(req, 0, sizeof(HttpRequest));
 
+    /* request body */
+    char *body_start = strstr(raw, "\r\n\r\n");
+    if (body_start) {
+        body_start += 4;
+        if (*body_start != '\0') {
+            req->body = body_start;
+        }
+    }
+
     char *saveptr;
     char *line = strtok_r(raw, "\r\n", &saveptr);
     if (!line) {
@@ -48,6 +58,8 @@ int parse_request(char *raw, HttpRequest *req) {
             snprintf(req->connection, sizeof(req->connection), "%s", line + 12);
         } else if (strncmp(line, "Accept:", 7) == 0) {
             snprintf(req->accept, sizeof(req->accept), "%s", line + 8);
+        } else if (strncmp(line, "Content-Length:", 15) == 0) {
+            req->content_length = atoi(line + 16);
         }
     }
 

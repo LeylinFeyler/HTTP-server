@@ -14,8 +14,17 @@ void handle_health(int fd, HttpRequest *req) {
     send_response(fd, 200, "OK", "server healthy", should_keep_alive(req));
 }
 
+void handle_echo(int fd, HttpRequest *req) {
+    if (!req->body) {
+        send_response(fd, 400, "Bad Request", "missing request body", should_keep_alive((req)));
+        return;
+    }
+
+    send_response(fd, 200, "OK", req->body, should_keep_alive(req));
+}
+
 // route table
-Route routes[] = {{"/hello", handle_hello}, {"/health", handle_health}};
+Route routes[] = {{"/hello", handle_hello}, {"/health", handle_health}, {"/echo", handle_echo}};
 
 int handle_route(int fd, HttpRequest *req) {
     for (size_t i = 0; i < sizeof(routes) / sizeof(routes[0]); i++) {
