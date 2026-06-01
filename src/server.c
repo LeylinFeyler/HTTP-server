@@ -28,35 +28,62 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
     char buffer[MAX_REQUEST_SIZE];
     char raw_buffer[MAX_REQUEST_SIZE];
 
-    int n = recv(client_fd, buffer, MAX_REQUEST_SIZE - 1, 0);
-    /* graceful disconnect */
-    if (n == 0) {
-        printf("%s disconnected\n", ip);
-        client_last_activity[client_fd] = 0;
-        close(client_fd);
-        return;
-    }
+    int total_bytes = 0;
 
-    /* no data available */
-    if (n < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+    while (1) {
+        int n = recv(client_fd, buffer + total_bytes, MAX_REQUEST_SIZE - total_bytes - 1, 0);
+
+        /* graceful disconnect */
+        if (n == 0) {
+            printf("%s disconnected\n", ip);
+            client_last_activity[client_fd] = 0;
+            close(client_fd);
             return;
         }
-        perror("recv");
-        client_last_activity[client_fd] = 0;
-        close(client_fd);
-        return;
+
+        /* non-blocking socket */
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return;
+            }
+            perror("recv");
+            client_last_activity[client_fd] = 0;
+            close(client_fd);
+            return;
+        }
+
+        total_bytes += n;
+
+        /* oversized request */
+        if (total_bytes >= MAX_REQUEST_SIZE - 1) {
+            send_response(client_fd, 413, "Payload Too Large", "413 Payload Too Large", 0);
+            client_last_activity[client_fd] = 0;
+            close(client_fd);
+            return;
+        }
+
+        buffer[total_bytes] = '\0';
+
+        /* stop if request complete */
+        char *headers_end = strstr(buffer, "\r\n\r\n");
+        if (!headers_end) {
+            continue;
+        }
+
+        /* no body */
+        char *content_length = strstr(buffer, "Content-Lenght:");
+        if (!content_length) {
+            break;
+        }
+
+        int body_size    = atoi(content_length + 16);
+        int header_size  = (headers_end + 4) - buffer;
+        int current_body = total_bytes - header_size;
+        if (current_body >= body_size) {
+            break;
+        }
     }
 
-    /* oversized request */
-    if (n >= MAX_REQUEST_SIZE - 1) {
-        send_response(client_fd, 413, "Payload Too Large", "413 Payload Too Large", 0);
-        client_last_activity[client_fd] = 0;
-        close(client_fd);
-        return;
-    }
-
-    buffer[n] = '\0';
     strcpy(raw_buffer, buffer);
 
     HttpRequest req = {0};
