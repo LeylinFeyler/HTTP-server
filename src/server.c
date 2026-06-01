@@ -22,62 +22,74 @@ time_t client_last_activity[MAX_CLIENTS] = {0};
 
 void handle_client(int client_fd, struct sockaddr_in *client) {
     char ip[INET_ADDRSTRLEN];
-
     inet_ntop(AF_INET, &client->sin_addr, ip, sizeof(ip));
 
-    while (1) {
-        char buffer[MAX_REQUEST_SIZE];
-        char raw_buffer[MAX_REQUEST_SIZE];
+    char buffer[MAX_REQUEST_SIZE];
+    char raw_buffer[MAX_REQUEST_SIZE];
 
-        int n = recv(client_fd, buffer, MAX_REQUEST_SIZE, 0);
-        /* client disconnected */
-        if (n <= 0) {
-            break;
-        }
-        /* oversized request */
-        if (n >= MAX_REQUEST_SIZE) {
-            send_response(client_fd, 413, "Payload Too Large", "413 Payload Too Large", 0);
+    int n = recv(client_fd, buffer, MAX_REQUEST_SIZE - 1, 0);
+    /* graceful disconnect */
+    if (n == 0) {
+        printf("%s disconnected\n", ip);
+        client_last_activity[client_fd] = 0;
+        close(client_fd);
+        return;
+    }
 
-            break;
-        }
+    /* socket error */
+    if (n < 0) {
+        perror("recv");
+        client_last_activity[client_fd] = 0;
+        close(client_fd);
+        return;
+    }
 
-        buffer[n] = '\0';
-        strcpy(raw_buffer, buffer);
+    /* oversized request */
+    if (n >= MAX_REQUEST_SIZE - 1) {
+        send_response(client_fd, 413, "Payload Too Large", "413 Payload Too Large", 0);
+        client_last_activity[client_fd] = 0;
+        close(client_fd);
+        return;
+    }
 
-        HttpRequest req = {0};
-        if (!parse_request(buffer, &req)) {
-            send_error_page(client_fd, 400, "Bad Request", 0);
-            break;
-        }
-        /* refresh timeout */
-        client_last_activity[client_fd] = time(NULL);
+    buffer[n] = '\0';
+    strcpy(raw_buffer, buffer);
 
-        int keep_alive = should_keep_alive(&req);
-        int send_body  = 1;
-        if (strcmp(req.method, "HEAD") == 0) {
-            send_body = 0;
-        } else if (strcmp(req.method, "GET") != 0) {
-            send_response(client_fd, 405, "Method Not Allowed", "405 Method Not Allowed",
-                          keep_alive);
-            if (!keep_alive) {
-                break;
-            }
-            continue;
-        }
+    HttpRequest req = {0};
+    if (!parse_request(buffer, &req)) {
+        send_error_page(client_fd, 400, "Bad Request", 0);
+        client_last_activity[client_fd] = 0;
+        close(client_fd);
+        return;
+    }
 
-        log_message(ip, req.method, req.path);
-        log_raw_message(ip, req.method, req.path, raw_buffer);
-        printf("%s %s %s\n", ip, req.method, req.path);
+    client_last_activity[client_fd] = time(NULL);
+    int keep_alive                  = should_keep_alive(&req);
+    int send_body                   = 1;
 
-        if (!handle_route(client_fd, &req)) {
-            send_file(client_fd, req.path, send_body, keep_alive);
-        }
-
-        /* client requested close */
+    if (strcmp(req.method, "HEAD") == 0) {
+        send_body = 0;
+    } else if (strcmp(req.method, "GET") != 0) {
+        send_response(client_fd, 405, "Method Not Allowed", "405 Method Not Allowed", keep_alive);
         if (!keep_alive) {
-            break;
+            client_last_activity[client_fd] = 0;
+            close(client_fd);
         }
-        break;
+        return;
+    }
+
+    log_message(ip, req.method, req.path);
+    log_raw_message(ip, req.method, req.path, raw_buffer);
+    printf("%s %s %s\n", ip, req.method, req.path);
+
+    if (!handle_route(client_fd, &req)) {
+        send_file(client_fd, req.path, send_body, keep_alive);
+    }
+
+    /* client requested close */
+    if (!keep_alive) {
+        client_last_activity[client_fd] = 0;
+        close(client_fd);
     }
 }
 
@@ -155,15 +167,6 @@ void run_server_epoll(void) {
 
             getpeername(current_fd, (struct sockaddr *)&client, &len);
             handle_client(current_fd, &client);
-
-            /* closed connection */
-            char test;
-
-            if (recv(current_fd, &test, 1, MSG_PEEK | MSG_DONTWAIT) == 0) {
-                epoll_ctl(epfd, EPOLL_CTL_DEL, current_fd, NULL);
-                close(current_fd);
-                client_last_activity[current_fd] = 0;
-            }
         }
     }
 }
