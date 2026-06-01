@@ -17,7 +17,7 @@
 
 #define MAX_EVENTS 64
 #define MAX_CLIENTS 65536
-#define KEEP_ALIVE_TIMEOUT 5
+#define KEEP_ALIVE_TIMEOUT 30
 
 time_t client_last_activity[MAX_CLIENTS] = {0};
 
