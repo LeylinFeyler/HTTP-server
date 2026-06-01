@@ -50,6 +50,21 @@ int parse_request(char *raw, HttpRequest *req) {
         return 0;
     }
 
+    /* validate method */
+    if (!is_valid_method(req->method)) {
+        return 0;
+    }
+
+    /* validate version */
+    if (!is_valid_http_version(req->version)) {
+        return 0;
+    }
+
+    /* path must start with / */
+    if (req->path[0] != '/') {
+        return 0;
+    }
+
     /* split path + query */
     char *query_start = strchr(req->path, '?');
     if (query_start) {
@@ -76,6 +91,16 @@ int parse_request(char *raw, HttpRequest *req) {
     trim_newline(req->user_agent);
     trim_newline(req->connection);
     trim_newline(req->accept);
+
+    /* HTTP/1.1 requires Host */
+    if (strcmp(req->version, "HTTP/1.1") == 0 && req->host[0] == '\0') {
+        return 0;
+    }
+
+    /* POST requires Content-Length */
+    if (strcmp(req->method, "POST") == 0 && req->content_length <= 0) {
+        return 0;
+    }
 
     return 1;
 }
@@ -136,4 +161,12 @@ void url_decode(char *dst, const char *src) {
         dst++;
     }
     *dst = '\0';
+}
+
+int is_valid_method(const char *method) {
+    return strcmp(method, "GET") == 0 || strcmp(method, "HEAD") == 0 || strcmp(method, "POST") == 0;
+}
+
+int is_valid_http_version(const char *version) {
+    return strcmp(version, "HTTP/1.0") == 0 || strcmp(version, "HTTP/1.1") == 0;
 }
