@@ -26,12 +26,18 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
     inet_ntop(AF_INET, &client->sin_addr, ip, sizeof(ip));
 
     while (1) {
-        char buffer[BUFFER_SIZE];
-        char raw_buffer[BUFFER_SIZE];
+        char buffer[MAX_REQUEST_SIZE];
+        char raw_buffer[MAX_REQUEST_SIZE];
 
-        int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+        int n = recv(client_fd, buffer, MAX_REQUEST_SIZE, 0);
         /* client disconnected */
         if (n <= 0) {
+            break;
+        }
+        /* oversized request */
+        if (n >= MAX_REQUEST_SIZE) {
+            send_response(client_fd, 413, "Payload Too Large", "413 Payload Too Large", 0);
+
             break;
         }
 

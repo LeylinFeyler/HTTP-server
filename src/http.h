@@ -1,7 +1,7 @@
 #ifndef HTTP_H
 #define HTTP_H
 
-#define BUFFER_SIZE 8192
+#define MAX_REQUEST_SIZE 8192
 
 typedef struct {
     char method[16];

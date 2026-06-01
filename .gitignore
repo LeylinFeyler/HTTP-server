@@ -1,9 +1,16 @@
 # executables
 server
 *.out
+
+# other files
 server.log
 server_raw.log
 TODO
+
+# doxugen stuff
+Doxyfile
+docs
+html
 
 # build artifacts
 *.o
