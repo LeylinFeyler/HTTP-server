@@ -22,5 +22,6 @@ typedef struct {
 int should_keep_alive(HttpRequest *req);
 int parse_request(char *raw, HttpRequest *req);
 char *get_query_param(HttpRequest *req, const char *key);
+void url_decode(char *dst, const char *src);
 
 #endif

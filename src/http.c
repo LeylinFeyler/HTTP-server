@@ -1,5 +1,6 @@
 #include "http.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,11 +84,15 @@ char *get_query_param(HttpRequest *req, const char *key) {
     static char value[256];
     value[0] = '\0';
 
+    if (req->query[0] == '\0') {
+        return NULL;
+    }
+
     char query_copy[512];
     snprintf(query_copy, sizeof(query_copy), "%s", req->query);
 
-    char *saveptr;
-    char *pair = strtok_r(query_copy, "&", &saveptr);
+    char *saveptr = NULL;
+    char *pair    = strtok_r(query_copy, "&", &saveptr);
     while (pair) {
         char *eq = strchr(pair, '=');
         if (eq) {
@@ -96,7 +101,7 @@ char *get_query_param(HttpRequest *req, const char *key) {
             char *param_value = eq + 1;
 
             if (strcmp(param_key, key) == 0) {
-                snprintf(value, sizeof(value), "%s", param_value);
+                url_decode(value, param_value);
                 return value;
             }
         }
@@ -104,4 +109,31 @@ char *get_query_param(HttpRequest *req, const char *key) {
     }
 
     return NULL;
+}
+
+void url_decode(char *dst, const char *src) {
+    while (*src) {
+        /* %20 -> space */
+        if (*src == '%' && isxdigit((unsigned char)src[1]) && isdigit((unsigned char)src[2])) {
+            char hex[3];
+
+            hex[0] = src[1];
+            hex[1] = src[2];
+            hex[2] = '\0';
+
+            *dst = (char)strtol(hex, NULL, 16);
+            src += 3;
+        }
+
+        /* '+' -> space */
+        else if (*src == '+') {
+            *dst = ' ';
+            src++;
+        } else {
+            *dst = *src;
+            src++;
+        }
+        dst++;
+    }
+    *dst = '\0';
 }
