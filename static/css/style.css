@@ -70,3 +70,46 @@ ul {
 li {
     margin-bottom: 8px;
 }
+
+.button-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+button {
+    border: none;
+    border-radius: 10px;
+    padding: 12px 18px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+.input-row {
+    display: flex;
+    gap: 12px;
+}
+
+input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: #111827;
+    color: white;
+}
+
+pre {
+    margin: 0;
+    padding: 16px;
+    border-radius: 12px;
+    background: #111827;
+    overflow-x: auto;
+    white-space: pre-wrap;
+}
