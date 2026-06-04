@@ -130,3 +130,17 @@ textarea {
     color: white;
     font: inherit;
 }
+
+.asset-image {
+    width: 96px;
+    height: 96px;
+}
+
+.info-list {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.info-list li {
+    margin-bottom: 8px;
+}
