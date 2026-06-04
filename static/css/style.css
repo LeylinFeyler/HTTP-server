@@ -113,3 +113,20 @@ pre {
     overflow-x: auto;
     white-space: pre-wrap;
 }
+
+.post-demo {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+textarea {
+    min-height: 120px;
+    resize: vertical;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: #111827;
+    color: white;
+    font: inherit;
+}
