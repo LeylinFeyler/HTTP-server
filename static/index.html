@@ -1,13 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>My C Server</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>HTTP Server (C)</title>
+
+    <link rel="icon" href="/img/favicon.svg">
+
+    <link rel="stylesheet" href="/css/style.css">
 </head>
+
 <body>
+    <main class="container">
 
-<h1>My C HTTP Server</h1>
+        <header class="hero">
 
-<p>Server works.</p>
+            <img src="/img/logo.svg" alt="logo" class="logo">
 
+            <div>
+                <h1>HTTP Server (C)</h1>
+
+                <p class="subtitle">
+                    minimal HTTP server
+                    written in C
+                </p>
+            </div>
+        </header>
+
+        <section class="card">
+
+            <h2>Server Status</h2>
+
+            <div class="status">
+                <span class="dot"></span>
+                online
+            </div>
+
+        </section>
+
+        <section class="card">
+
+            <h2>Features</h2>
+
+            <ul>
+                <li>GET / HEAD / POST</li>
+                <li>keep-alive</li>
+                <li>epoll backend</li>
+                <li>non-blocking sockets</li>
+                <li>static file serving</li>
+                <li>request routing</li>
+                <li>JSON helpers</li>
+            </ul>
+
+        </section>
+
+    </main>
 </body>
+
 </html>
