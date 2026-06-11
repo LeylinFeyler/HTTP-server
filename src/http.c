@@ -51,10 +51,10 @@ int parse_request(char *raw, HttpRequest *req) {
         return 0;
     }
 
-    /* validate method */
-    if (!is_valid_method(req->method)) {
-        return 0;
-    }
+    // /* validate method */
+    // if (!is_valid_method(req->method)) {
+    //     return 0;
+    // }
 
     /* validate version */
     if (!is_valid_http_version(req->version)) {

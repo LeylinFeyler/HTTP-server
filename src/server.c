@@ -100,8 +100,8 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
 
     if (strcmp(req.method, "HEAD") == 0) {
         send_body = 0;
-    } else if (strcmp(req.method, "GET") != 0 && strcmp(req.method, "POST") != 0) {
-        send_response(client_fd, 405, "Method Not Allowed", "405 Method Not Allowed", keep_alive);
+    } else if (!is_valid_method(req.method)) {
+        send_method_not_allowed(client_fd, keep_alive);
         if (!keep_alive) {
             client_last_activity[client_fd] = 0;
             close(client_fd);
