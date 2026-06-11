@@ -71,7 +71,7 @@ void handle_client(int client_fd, struct sockaddr_in *client) {
         }
 
         /* no body */
-        char *content_length = strstr(buffer, "Content-Lenght:");
+        char *content_length = strstr(buffer, "Content-Length:");
         if (!content_length) {
             break;
         }
